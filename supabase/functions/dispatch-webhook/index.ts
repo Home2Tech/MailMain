@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 const resendKey = Deno.env.get("RESEND_API_KEY")!;
-const fromEmail = Deno.env.get("RESEND_FROM_EMAIL") ?? "noreply@example.com";
+const fallbackFromEmail = Deno.env.get("RESEND_FROM_EMAIL") ?? "noreply@example.com";
 const webhookSecret = Deno.env.get("WEBHOOK_SECRET");
 const unsubscribeSecret = Deno.env.get("UNSUBSCRIBE_SECRET")!;
 const unsubscribeUrl = `${Deno.env.get("SUPABASE_URL")}/functions/v1/unsubscribe`;
@@ -14,16 +14,27 @@ function render(template: string, fields: Record<string, unknown>) { return temp
 const encoder = new TextEncoder();
 const toBase64Url = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 async function unsubscribeToken(subscriberId: string) { const key = await crypto.subtle.importKey("raw", encoder.encode(unsubscribeSecret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]); const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(subscriberId)); return `${subscriberId}.${toBase64Url(new Uint8Array(signature))}`; }
-function withUnsubscribeFooter(html: string, url: string) { return `${html}<div style="max-width:640px;margin:24px auto 0;padding:16px;font-family:Arial,sans-serif;font-size:12px;color:#64748b;text-align:center;border-top:1px solid #e2e8f0">You are receiving this email because you subscribed to Blkgradstudent. <a href="${url}" style="color:#0f766e">Unsubscribe</a></div>`; }
+function withUnsubscribeFooter(html: string, url: string) { return `${html}<div style="max-width:640px;margin:24px auto 0;padding:16px;font-family:Arial,sans-serif;font-size:12px;color:#64748b;text-align:center;border-top:1px solid #e2e8f0">You are receiving this email because you subscribed to this mailing list. <a href="${url}" style="color:#0f766e">Unsubscribe</a></div>`; }
 
 async function send(to: string, subject: string, html: string, text: string | null) {
+  const { data } = await supabase.from("app_settings").select("resend_from_email").eq("id", true).maybeSingle();
+  const fromEmail = data?.resend_from_email ?? fallbackFromEmail;
   const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" }, body: JSON.stringify({ from: fromEmail, to, subject, html, text: text ?? undefined }) });
   const result = await response.json();
   if (!response.ok) throw new Error(`Resend ${response.status}: ${JSON.stringify(result)}`);
   return result as { id: string };
 }
 
-async function subscriberForPayload(payload: Payload, listId: string): Promise<Recipient | null> {
+async function defaultSubscriberListId(): Promise<string> {
+  const { data: existing, error } = await supabase.from("subscriber_lists").select("id").eq("name", "Subscribers").maybeSingle();
+  if (error) throw error;
+  if (existing) return existing.id;
+  const { data, error: insertError } = await supabase.from("subscriber_lists").insert({ name: "Subscribers" }).select("id").single();
+  if (insertError) throw insertError;
+  return data.id;
+}
+
+async function subscriberForPayload(payload: Payload, listId: string | null): Promise<Recipient | null> {
   let subscriber: Recipient | null = null;
   if (payload.subscriber_id) {
     const { data } = await supabase.from("subscribers").select("id, email, metadata").eq("id", payload.subscriber_id).maybeSingle();
@@ -41,7 +52,8 @@ async function subscriberForPayload(payload: Payload, listId: string): Promise<R
     }
   }
   if (!subscriber) return null;
-  const { error: membershipError } = await supabase.from("subscriber_list_memberships").upsert({ subscriber_id: subscriber.id, list_id: listId });
+  const membershipListId = listId ?? await defaultSubscriberListId();
+  const { error: membershipError } = await supabase.from("subscriber_list_memberships").upsert({ subscriber_id: subscriber.id, list_id: membershipListId });
   if (membershipError) throw membershipError;
   return subscriber;
 }
@@ -73,7 +85,7 @@ Deno.serve(async (request) => {
 
   for (const rule of rules ?? []) {
     const template = Array.isArray(rule.email_templates) ? rule.email_templates[0] : rule.email_templates;
-    if (!rule.list_id) { results.push({ ruleId: rule.id, status: "skipped", error: "Rule has no recipient list" }); continue; }
+    if (payload.trigger_event === "new_blog_post" && !rule.list_id) { results.push({ ruleId: rule.id, status: "skipped", error: "Rule has no recipient list" }); continue; }
     if (!template) { results.push({ ruleId: rule.id, status: "skipped", error: "Rule has no template" }); continue; }
     try {
       const { data: event, error: eventError } = await supabase.from("automation_events").insert({ trigger_event: payload.trigger_event, rule_id: rule.id, payload, status: "received", source_event_id: eventId }).select("id").single();

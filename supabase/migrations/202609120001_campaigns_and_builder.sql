@@ -29,7 +29,7 @@ create table if not exists email_campaigns (
   subject text not null,
   html_body text not null,
   text_body text,
-  from_email text not null default 'Demetri @ Blkgradstudent <mail@blkgradstudent.com>',
+  from_email text not null default 'Your Name <mail@your-domain.com>',
   status text not null default 'draft'
     check (status in ('draft', 'scheduled', 'sending', 'sent', 'failed', 'cancelled')),
   scheduled_for timestamptz,

@@ -43,6 +43,7 @@ export interface SubscriberRow {
 
 export interface SubscriberListRow { id: string; name: string; created_at: string; updated_at: string; }
 export interface CampaignRow { id: string; template_id: string | null; list_id: string; subject: string; html_body: string; text_body: string | null; from_email: string; status: string; scheduled_for: string | null; recipient_count: number; created_at: string; updated_at: string; }
+export interface AppSettingsRow { id: boolean; rss_feed_url: string | null; resend_from_email: string; created_at: string; updated_at: string; }
 
 export interface Database {
   __InternalSupabase: {
@@ -92,6 +93,12 @@ export interface Database {
         Row: CampaignRow;
         Insert: Partial<CampaignRow> & { list_id: string; subject: string; html_body: string };
         Update: Partial<CampaignRow>;
+        Relationships: [];
+      };
+      app_settings: {
+        Row: AppSettingsRow;
+        Insert: Partial<AppSettingsRow>;
+        Update: Partial<AppSettingsRow>;
         Relationships: [];
       };
     };

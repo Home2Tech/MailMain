@@ -25,7 +25,7 @@ function render(template: string, fields: Record<string, unknown>) {
 }
 
 function withUnsubscribeFooter(html: string, url: string) {
-  return `${html}<div style="max-width:640px;margin:24px auto 0;padding:16px;font-family:Arial,sans-serif;font-size:12px;color:#64748b;text-align:center;border-top:1px solid #e2e8f0">You are receiving this email because you subscribed to Blkgradstudent. <a href="${url}" style="color:#0f766e">Unsubscribe</a></div>`;
+  return `${html}<div style="max-width:640px;margin:24px auto 0;padding:16px;font-family:Arial,sans-serif;font-size:12px;color:#64748b;text-align:center;border-top:1px solid #e2e8f0">You are receiving this email because you subscribed to this mailing list. <a href="${url}" style="color:#0f766e">Unsubscribe</a></div>`;
 }
 
 Deno.serve(async (request) => {

@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { HashRouter, Navigate, NavLink, Route, Routes } from "react-router-dom";
-import { List, LogOut, Mail, Menu, Users, Workflow, X } from "lucide-react";
+import { Cable, List, LogOut, Mail, Menu, Settings, Users, Workflow, X } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import TemplateBuilder from "./pages/TemplateBuilder";
 import WorkflowManager from "./pages/WorkflowManager";
 import ListManager from "./pages/ListManager";
 import SubscriberManager from "./pages/SubscriberManager";
+import SettingsManager from "./pages/SettingsManager";
+import IntegrationsManager from "./pages/IntegrationsManager";
 import SignInScreen from "./components/SignInScreen";
 import { supabase } from "./lib/supabaseClient";
 import "./index.css";
@@ -19,6 +21,8 @@ function App() {
     { to: "/lists", label: "Lists", icon: List },
     { to: "/workflows", label: "Automations", icon: Workflow },
     { to: "/subscribers", label: "Subscribers", icon: Users },
+    { to: "/integrations", label: "Integrations", icon: Cable },
+    { to: "/settings", label: "Settings", icon: Settings },
   ];
 
   useEffect(() => {
@@ -53,6 +57,8 @@ function App() {
             <Route path="/workflows" element={<WorkflowManager />} />
             <Route path="/lists" element={<ListManager />} />
             <Route path="/subscribers" element={<SubscriberManager />} />
+            <Route path="/integrations" element={<IntegrationsManager />} />
+            <Route path="/settings" element={<SettingsManager />} />
           </Routes>
         </main>
       </div>

@@ -18,5 +18,7 @@ Deno.serve(async (request) => {
   if (!subscriberId) return new Response("Invalid unsubscribe link.", { status: 400, headers: { "Content-Type": "text/plain" } });
   const { error } = await supabase.from("subscribers").update({ status: "unsubscribed" }).eq("id", subscriberId);
   if (error) return new Response("Unable to process your request.", { status: 500, headers: { "Content-Type": "text/plain" } });
+  const { error: membershipError } = await supabase.from("subscriber_list_memberships").delete().eq("subscriber_id", subscriberId);
+  if (membershipError) return new Response("Unable to process your request.", { status: 500, headers: { "Content-Type": "text/plain" } });
   return new Response("You have been unsubscribed.", { headers: { "Content-Type": "text/plain" } });
 });
